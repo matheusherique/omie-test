@@ -1,4 +1,5 @@
 import re
+import logging
 import requests
 from lxml import html
 from typing import Tuple
@@ -6,6 +7,8 @@ from flask import Response
 from bs4 import BeautifulSoup
 from flask_restful import Resource
 from requests.structures import CaseInsensitiveDict
+
+LOGGER = logging.getLogger(__name__)
 
 BASE_URL = 'https://nfse.campinas.sp.gov.br/NotaFiscal'
 VERIFY_NFSE_URL = f'{BASE_URL}/action/notaFiscal/verificarAutenticidade.php'
@@ -35,6 +38,7 @@ class Bill(Resource):
 
     def get_bill_url_and_cookies(self) -> Tuple:
         try:
+            LOGGER.debug(f'Posting data on {VERIFY_NFSE_URL}...')
             resp = requests.post(VERIFY_NFSE_URL, headers=self.headers, data=self.get_data())
 
             soup = BeautifulSoup(resp.text, features="lxml")
@@ -45,15 +49,16 @@ class Bill(Resource):
 
             return (url, resp.cookies)
         except requests.exceptions.HTTPError as error:
+            LOGGER.error(f'An error has occurred: {error}')
             return Response(f"{{'error':'{error}'}}", status=error, mimetype='application/json')
         except requests.exceptions.RequestException as error:
-            return SystemExit(error)
-
+            LOGGER.critical(f'A critical error has occurred: {error}')
 
     def get_bill_general_info(self) -> dict:
         url, cookies = self.get_bill_url_and_cookies()
 
         try:
+            LOGGER.debug(f'Getting infos from {url}...')
             resp = requests.get(url, cookies=cookies)
 
             tree = html.fromstring(resp.text)
@@ -85,8 +90,10 @@ class Bill(Resource):
                 }
             }
         except requests.exceptions.HTTPError as error:
+            LOGGER.error(f'An error has occurred: {error}')
             return Response(f"{{'error':'{error}'}}", status=error, mimetype='application/json')
         except Exception as error:
+            LOGGER.warning(f'Information not found: {error}')
             return Response(f"{{'error':'information not found'}}", status=400, mimetype='application/json')
         except requests.exceptions.RequestException as error:
-            return SystemExit(error)
+            LOGGER.critical(f'A critical error has occurred: {error}')
