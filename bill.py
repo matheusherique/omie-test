@@ -2,6 +2,7 @@ import re
 import requests
 from lxml import html
 from typing import Tuple
+from flask import Response
 from bs4 import BeautifulSoup
 from flask_restful import Resource
 from requests.structures import CaseInsensitiveDict
@@ -17,7 +18,7 @@ class Bill(Resource):
         headers["Content-Type"] = "application/x-www-form-urlencoded"
         self.headers = headers
 
-    def get(self):
+    def get(self) -> dict:
         return self.get_bill_general_info()
 
     def get_data(self) -> str:
@@ -33,46 +34,59 @@ class Bill(Resource):
         return data
 
     def get_bill_url_and_cookies(self) -> Tuple:
-        resp = requests.post(VERIFY_NFSE_URL, headers=self.headers, data=self.get_data())
+        try:
+            resp = requests.post(VERIFY_NFSE_URL, headers=self.headers, data=self.get_data())
 
-        soup = BeautifulSoup(resp.text, features="lxml")
-        script_text = soup.find('script').string
-        url_regex = re.search("'(.*?)'", script_text)
-        url_query = url_regex.group(0)[6:-1]
-        url = BASE_URL + url_query
+            soup = BeautifulSoup(resp.text, features="lxml")
+            script_text = soup.find('script').string
+            url_regex = re.search("'(.*?)'", script_text)
+            url_query = url_regex.group(0)[6:-1]
+            url = BASE_URL + url_query
 
-        return (url, resp.cookies)
+            return (url, resp.cookies)
+        except requests.exceptions.HTTPError as error:
+            return Response(f"{{'error':'{error}'}}", status=error, mimetype='application/json')
+        except requests.exceptions.RequestException as error:
+            return SystemExit(error)
+
 
     def get_bill_general_info(self) -> dict:
         url, cookies = self.get_bill_url_and_cookies()
 
-        resp = requests.get(url, cookies=cookies)
+        try:
+            resp = requests.get(url, cookies=cookies)
 
-        tree = html.fromstring(resp.text)
-        info_from_url = tree.xpath(XPATH_PATTERN)
+            tree = html.fromstring(resp.text)
+            info_from_url = tree.xpath(XPATH_PATTERN)
 
-        provider_info = {}
-        provider_info['razao_social'] = info_from_url[0].text
-        provider_info['cnpj'] = info_from_url[1].text
-        provider_info['inscricao_municipal'] = info_from_url[2].text
-        provider_info['endereco'] = info_from_url[3].text
-        provider_info['municipio'] = info_from_url[4].text
-        provider_info['uf'] = info_from_url[5].text
-        provider_info['telefone'] = info_from_url[6].text
+            provider_info = {}
+            provider_info['razao_social'] = info_from_url[0].text
+            provider_info['cnpj'] = info_from_url[1].text
+            provider_info['inscricao_municipal'] = info_from_url[2].text
+            provider_info['endereco'] = info_from_url[3].text
+            provider_info['municipio'] = info_from_url[4].text
+            provider_info['uf'] = info_from_url[5].text
+            provider_info['telefone'] = info_from_url[6].text
 
-        taker_info = {}
-        taker_info['razao_social'] = info_from_url[7].text
-        taker_info['cnpj'] = info_from_url[8].text
-        taker_info['inscricao_municipal'] = info_from_url[9].text
-        taker_info['endereco'] = info_from_url[10].text
-        taker_info['municipio'] = info_from_url[11].text
-        taker_info['uf'] = info_from_url[12].text
-        taker_info['email'] = info_from_url[13].text
-        taker_info['telefone'] = info_from_url[14].text
+            taker_info = {}
+            taker_info['razao_social'] = info_from_url[7].text
+            taker_info['cnpj'] = info_from_url[8].text
+            taker_info['inscricao_municipal'] = info_from_url[9].text
+            taker_info['endereco'] = info_from_url[10].text
+            taker_info['municipio'] = info_from_url[11].text
+            taker_info['uf'] = info_from_url[12].text
+            taker_info['email'] = info_from_url[13].text
+            taker_info['telefone'] = info_from_url[14].text
 
-        return {
-            'info' : {
-                'provider_info': provider_info,
-                'taker_info': taker_info
+            return {
+                'info' : {
+                    'provider_info': provider_info,
+                    'taker_info': taker_info
+                }
             }
-        }
+        except requests.exceptions.HTTPError as error:
+            return Response(f"{{'error':'{error}'}}", status=error, mimetype='application/json')
+        except Exception as error:
+            return Response(f"{{'error':'information not found'}}", status=400, mimetype='application/json')
+        except requests.exceptions.RequestException as error:
+            return SystemExit(error)
