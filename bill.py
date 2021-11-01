@@ -35,7 +35,7 @@ class Bill(Resource):
     def get_bill_url_and_cookies(self) -> Tuple:
         resp = requests.post(VERIFY_NFSE_URL, headers=self.headers, data=self.get_data())
 
-        soup = BeautifulSoup(resp.text)
+        soup = BeautifulSoup(resp.text, features="lxml")
         script_text = soup.find('script').string
         url_regex = re.search("'(.*?)'", script_text)
         url_query = url_regex.group(0)[6:-1]
@@ -52,22 +52,23 @@ class Bill(Resource):
         info_from_url = tree.xpath(XPATH_PATTERN)
 
         provider_info = {}
-        provider_info['razao_social'] = info_from_url[0]
-        provider_info['cnpj'] = info_from_url[1]
-        provider_info['inscricao_municipal'] = info_from_url[2]
-        provider_info['endereco'] = info_from_url[3]
-        provider_info['municipio'] = info_from_url[4]
-        provider_info['uf'] = info_from_url[5]
-        provider_info['telefone'] = info_from_url[6]
+        provider_info['razao_social'] = info_from_url[0].text
+        provider_info['cnpj'] = info_from_url[1].text
+        provider_info['inscricao_municipal'] = info_from_url[2].text
+        provider_info['endereco'] = info_from_url[3].text
+        provider_info['municipio'] = info_from_url[4].text
+        provider_info['uf'] = info_from_url[5].text
+        provider_info['telefone'] = info_from_url[6].text
 
         taker_info = {}
-        taker_info['razao_social'] = info_from_url[7]
-        taker_info['cnpj'] = info_from_url[8]
-        taker_info['inscricao_municipal'] = info_from_url[9]
-        taker_info['endereco'] = info_from_url[10]
-        taker_info['municipio'] = info_from_url[11]
-        taker_info['uf'] = info_from_url[12]
-        taker_info['telefone'] = info_from_url[13]
+        taker_info['razao_social'] = info_from_url[7].text
+        taker_info['cnpj'] = info_from_url[8].text
+        taker_info['inscricao_municipal'] = info_from_url[9].text
+        taker_info['endereco'] = info_from_url[10].text
+        taker_info['municipio'] = info_from_url[11].text
+        taker_info['uf'] = info_from_url[12].text
+        taker_info['email'] = info_from_url[13].text
+        taker_info['telefone'] = info_from_url[14].text
 
         return {
             'info' : {
