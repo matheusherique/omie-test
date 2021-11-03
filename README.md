@@ -12,3 +12,8 @@ $ flask run
 ```browser
 http://127.0.0.1:5000/nota_fiscal
 ```
+
+## Or with curl
+```sh
+$ curl -X GET http://127.0.0.1:5000/nota_fiscal
+```
